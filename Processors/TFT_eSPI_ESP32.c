@@ -10,6 +10,7 @@
 #if !defined (TFT_PARALLEL_8_BIT)
   #ifdef CONFIG_IDF_TARGET_ESP32
     #ifdef USE_HSPI_PORT
+	  #warning>>>> TFT HSPI spi
       SPIClass spi = SPIClass(HSPI);
     #elif defined(USE_FSPI_PORT)
       SPIClass spi = SPIClass(FSPI);
@@ -18,6 +19,7 @@
     #endif
   #else
     #ifdef USE_HSPI_PORT
+      #warning>>>> TFT HSPI spi
       SPIClass spi = SPIClass(HSPI);
     #elif defined(USE_FSPI_PORT)
       SPIClass spi = SPIClass(FSPI);
@@ -793,14 +795,18 @@ bool TFT_eSPI::initDMA(bool ctrl_cs)
     .sclk_io_num = TFT_SCLK,
     .quadwp_io_num = -1,
     .quadhd_io_num = -1,
-    #ifdef xCONFIG_IDF_TARGET_ESP32S2
+    #ifdef CONFIG_IDF_TARGET_ESP32
       .data4_io_num = -1,
       .data5_io_num = -1,
       .data6_io_num = -1,
       .data7_io_num = -1,
+	  .data_io_default_level = false,
     #endif
     .max_transfer_sz = TFT_WIDTH * TFT_HEIGHT * 2 + 8, // TFT screen size
     .flags = 0,
+     #ifdef CONFIG_IDF_TARGET_ESP32
+     .isr_cpu_id = ESP_INTR_CPU_AFFINITY_AUTO,
+     #endif
     .intr_flags = 0
   };
 
@@ -812,11 +818,17 @@ bool TFT_eSPI::initDMA(bool ctrl_cs)
     .address_bits = 0,
     .dummy_bits = 0,
     .mode = TFT_SPI_MODE,
+	#ifdef CONFIG_IDF_TARGET_ESP32
+	.clock_source = SPI_CLK_SRC_DEFAULT,
+    #endif
     .duty_cycle_pos = 0,
     .cs_ena_pretrans = 0,
     .cs_ena_posttrans = 0,
     .clock_speed_hz = SPI_FREQUENCY,
     .input_delay_ns = 0,
+    #ifdef CONFIG_IDF_TARGET_ESP32
+    .sample_point = SPI_SAMPLING_POINT_PHASE_0,
+    #endif
     .spics_io_num = pin,
     .flags = SPI_DEVICE_NO_DUMMY, //0,
     .queue_size = 1,

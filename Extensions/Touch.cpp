@@ -24,11 +24,11 @@ inline void TFT_eSPI::begin_touch_read_write(void){
   DMA_BUSY_CHECK;
   CS_H; // Just in case it has been left low
   #if defined (SPI_HAS_TRANSACTION) && defined (SUPPORT_TRANSACTIONS)
-    if (locked) {locked = false; spi.beginTransaction(SPISettings(SPI_TOUCH_FREQUENCY, MSBFIRST, SPI_MODE0));}
+    if (locked) {locked = false; spi2.beginTransaction(SPISettings(SPI_TOUCH_FREQUENCY, MSBFIRST, SPI_MODE0));}
   #else
-    spi.setFrequency(SPI_TOUCH_FREQUENCY);
+    spi2.setFrequency(SPI_TOUCH_FREQUENCY);
   #endif
-  SET_BUS_READ_MODE;
+  SET_BUS_READ_MODE2;
   T_CS_L;
 }
 
@@ -37,13 +37,14 @@ inline void TFT_eSPI::begin_touch_read_write(void){
 ** Description:             End transaction and deselect touch controller
 ***************************************************************************************/
 inline void TFT_eSPI::end_touch_read_write(void){
-  T_CS_H;
+  DMA_BUSY_CHECK;
+  //SET_BUS_WRITE_MODE2;
   #if defined (SPI_HAS_TRANSACTION) && defined (SUPPORT_TRANSACTIONS)
-    if(!inTransaction) {if (!locked) {locked = true; spi.endTransaction();}}
+    if(!inTransaction) {if (!locked) {locked = true; spi2.endTransaction();}}
   #else
     spi.setFrequency(SPI_FREQUENCY);
   #endif
-  //SET_BUS_WRITE_MODE;
+  T_CS_H; // Just in case it has been left low
 }
 
 /***************************************************************************************
@@ -63,31 +64,31 @@ uint8_t TFT_eSPI::getTouchRaw(uint16_t *x, uint16_t *y){
   begin_touch_read_write();
   
   // Start YP sample request for x position, read 4 times and keep last sample
-  spi.transfer(0xd0);                    // Start new YP conversion
-  spi.transfer(0);                       // Read first 8 bits
-  spi.transfer(0xd0);                    // Read last 8 bits and start new YP conversion
-  spi.transfer(0);                       // Read first 8 bits
-  spi.transfer(0xd0);                    // Read last 8 bits and start new YP conversion
-  spi.transfer(0);                       // Read first 8 bits
-  spi.transfer(0xd0);                    // Read last 8 bits and start new YP conversion
+  spi2.transfer(0xd0);                    // Start new YP conversion
+  spi2.transfer(0);                       // Read first 8 bits
+  spi2.transfer(0xd0);                    // Read last 8 bits and start new YP conversion
+  spi2.transfer(0);                       // Read first 8 bits
+  spi2.transfer(0xd0);                    // Read last 8 bits and start new YP conversion
+  spi2.transfer(0);                       // Read first 8 bits
+  spi2.transfer(0xd0);                    // Read last 8 bits and start new YP conversion
 
-  tmp = spi.transfer(0);                   // Read first 8 bits
+  tmp = spi2.transfer(0);                   // Read first 8 bits
   tmp = tmp <<5;
-  tmp |= 0x1f & (spi.transfer(0x90)>>3);   // Read last 8 bits and start new XP conversion
+  tmp |= 0x1f & (spi2.transfer(0x90)>>3);   // Read last 8 bits and start new XP conversion
 
   *x = tmp;
 
   // Start XP sample request for y position, read 4 times and keep last sample
-  spi.transfer(0);                       // Read first 8 bits
-  spi.transfer(0x90);                    // Read last 8 bits and start new XP conversion
-  spi.transfer(0);                       // Read first 8 bits
-  spi.transfer(0x90);                    // Read last 8 bits and start new XP conversion
-  spi.transfer(0);                       // Read first 8 bits
-  spi.transfer(0x90);                    // Read last 8 bits and start new XP conversion
+  spi2.transfer(0);                       // Read first 8 bits
+  spi2.transfer(0x90);                    // Read last 8 bits and start new XP conversion
+  spi2.transfer(0);                       // Read first 8 bits
+  spi2.transfer(0x90);                    // Read last 8 bits and start new XP conversion
+  spi2.transfer(0);                       // Read first 8 bits
+  spi2.transfer(0x90);                    // Read last 8 bits and start new XP conversion
 
-  tmp = spi.transfer(0);                 // Read first 8 bits
+  tmp = spi2.transfer(0);                 // Read first 8 bits
   tmp = tmp <<5;
-  tmp |= 0x1f & (spi.transfer(0)>>3);    // Read last 8 bits
+  tmp |= 0x1f & (spi2.transfer(0)>>3);    // Read last 8 bits
 
   *y = tmp;
 
@@ -106,9 +107,9 @@ uint16_t TFT_eSPI::getTouchRawZ(void){
 
   // Z sample request
   int16_t tz = 0xFFF;
-  spi.transfer(0xb0);               // Start new Z1 conversion
-  tz += spi.transfer16(0xc0) >> 3;  // Read Z1 and start Z2 conversion
-  tz -= spi.transfer16(0x00) >> 3;  // Read Z2
+  spi2.transfer(0xb0);               // Start new Z1 conversion
+  tz += spi2.transfer16(0xc0) >> 3;  // Read Z1 and start Z2 conversion
+  tz -= spi2.transfer16(0x00) >> 3;  // Read Z2
 
   end_touch_read_write();
 

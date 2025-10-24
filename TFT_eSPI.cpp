@@ -37,6 +37,22 @@
   #define SPI_BUSY_CHECK
 #endif
 
+// Use HSPI for TFT and VSPI for TOUCH/SD if asked 
+#if !defined(TFT_PARALLEL_8_BIT) && defined(CONFIG_IDF_TARGET_ESP32)
+  #if defined(USE_HSPI_PORT) && defined(USE_HSPI_AND_VSPI_PORT)
+    #warning>>>> Touch/Sd VSPI spi2
+    SPIClass spi2 = SPIClass(VSPI);
+    volatile uint32_t* _spi_user2      = (volatile uint32_t*)(SPI_USER_REG(VSPI));
+	#define SET_BUS_WRITE_MODE2 *_spi_user2 = SPI_USR_MOSI
+    #define SET_BUS_READ_MODE2  *_spi_user2 = SPI_USR_MOSI | SPI_USR_MISO | SPI_DOUTDIN
+  #else
+    #warning>>>> TFT/Touch/Sd VSPI spi2 = &spi
+    SPIClass& spi2 = spi;
+	#define SET_BUS_WRITE_MODE2 *_spi_user = SPI_USR_MOSI
+    #define SET_BUS_READ_MODE2  *_spi_user = SPI_USR_MOSI | SPI_USR_MISO | SPI_DOUTDIN
+  #endif
+#endif
+
 // Clipping macro for pushImage
 #define PI_CLIP                                        \
   if (_vpOoB) return;                                  \
@@ -644,7 +660,12 @@ void TFT_eSPI::init(uint8_t tc)
 #else
   #if !defined(TFT_PARALLEL_8_BIT) && !defined(RP2040_PIO_INTERFACE)
     #if defined (TFT_MOSI) && !defined (TFT_SPI_OVERLAP) && !defined(ARDUINO_ARCH_RP2040) && !defined (ARDUINO_ARCH_MBED)
+	  #warning>>>> spi.begin
       spi.begin(TFT_SCLK, TFT_MISO, TFT_MOSI, -1); // This will set MISO to input
+      #if defined(CONFIG_IDF_TARGET_ESP32) && defined(USE_HSPI_PORT) && defined(USE_HSPI_AND_VSPI_PORT)
+	  #warning>>>> spi2.begin
+	  spi2.begin(TOUCH_SCLK, TOUCH_MISO, TOUCH_MOSI, -1); // This will set MISO to input
+      #endif	
     #else
       spi.begin(); // This will set MISO to input
     #endif
